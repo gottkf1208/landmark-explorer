@@ -131,7 +131,7 @@
     display:grid;place-items:center;transition:transform .1s}
   .zoom-ctrl button:hover{background:#fff}
   .zoom-ctrl button:active{transform:scale(.92)}
-  .zoom-ctrl .reset{font-size:17px}
+  .zoom-ctrl .reset{font-size:13px;font-weight:800}
 
   .toast{position:absolute;top:14px;left:50%;transform:translateX(-50%) translateY(-14px);
     background:#fff;border-radius:12px;padding:11px 18px;box-shadow:var(--shadow);font-size:14px;
@@ -215,6 +215,14 @@
   .gloss-item:last-child{border-bottom:0}
   .gloss-item b{display:block;font-size:14.5px;margin-bottom:3px;color:var(--ink)}
   .gloss-item span{font-size:13px;color:var(--muted);line-height:1.55}
+  .fav-row{display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #eef2f6}
+  .fav-row:last-child{border-bottom:0}
+  .fav-go{flex:1;text-align:left;border:1px solid #e9eef4;background:#fff;border-radius:11px;padding:11px 14px;
+    font-size:14.5px;font-weight:700;color:var(--ink);cursor:pointer;font-family:inherit;transition:all .13s}
+  .fav-go:hover{border-color:var(--aqua);background:#f0fbfe;color:var(--aqua-deep)}
+  .fav-del{width:34px;height:34px;flex:0 0 auto;border:0;background:#f1f5f9;border-radius:9px;font-size:18px;color:var(--muted);cursor:pointer}
+  .fav-del:hover{background:#ffe0e0;color:#c0392b}
+  .btn-ghost.fav-on{border-color:var(--orange);color:var(--orange);background:#fff8f0}
 </style>
 </head>
 <body>
@@ -246,6 +254,7 @@
       <button class="mc on" id="btnGrid">🌐 위경도</button>
       <button class="mc on" id="btnGeo">🗺️ 대륙·대양</button>
       <button class="mc" id="glossBtn">📖 용어</button>
+      <button class="mc" id="favListBtn">⭐ 즐겨찾기</button>
     </div>
     <div class="coord" id="coord"></div>
     <svg id="map" viewBox="0 18 1000 388" preserveAspectRatio="xMidYMid meet" role="img"
@@ -263,7 +272,7 @@
     <div class="zoom-ctrl">
       <button id="zin" title="확대" aria-label="확대">＋</button>
       <button id="zout" title="축소" aria-label="축소">－</button>
-      <button id="zreset" class="reset" title="전체 지도" aria-label="전체 지도">🌐</button>
+      <button id="zreset" class="reset" title="전체 세계지도(100%)" aria-label="전체 세계지도">100%</button>
     </div>
     <div class="toast" id="toast"></div>
   </div>
@@ -285,6 +294,14 @@
     <h2>📖 지도 낱말 사전</h2>
     <div class="gloss-list" id="glossList"></div>
     <button class="qr-close" id="glossClose">닫기</button>
+  </div>
+</div>
+<div class="qr-modal" id="favModal">
+  <div class="qr-card gloss-card">
+    <button class="qr-x" id="favX" aria-label="닫기">×</button>
+    <h2>⭐ 즐겨찾기</h2>
+    <div class="gloss-list" id="favList"></div>
+    <button class="qr-close" id="favCloseBtn">닫기</button>
   </div>
 </div>
 
@@ -6148,7 +6165,7 @@ const zoom = d3.zoom().scaleExtent([1,60])
       const k = ev.transform.k;
       viewport.attr("transform", ev.transform);
       gCountries.selectAll(".country").attr("stroke-width", .5/k);
-      gDots.selectAll(".dot-core").attr("r", 8/k);
+      gDots.selectAll(".dot-core").attr("r", 8/k).attr("stroke-width", 1.8/k);
       gDots.selectAll(".dot-halo").attr("r", 13/k);
       gGrid.selectAll(".grat").attr("stroke-width",.7/k);
       gRef.selectAll(".ref").attr("stroke-width",1.5/k).attr("stroke-dasharray",(6/k)+" "+(4/k));
@@ -6172,6 +6189,7 @@ function frameTo(points, maxK=16, pad=0.75){
   svg.transition().duration(760).call(zoom.transform, t);
 }
 function worldView(){ svg.transition().duration(700).call(zoom.transform, d3.zoomIdentity); }
+function worldViewAll(){ markers.forEach(x=>x.sel.classed("blink",false)); gDots.classed("focusing",false); document.querySelectorAll(".card").forEach(c=>c.classList.remove("active")); worldView(); }
 
 /* ---------- markers ---------- */
 let markers = [];          // {lm, sel(g), card}
@@ -6184,7 +6202,7 @@ function addMarkers(landmarks, numbered=true){
     const [x,y]=projection([lm.lng,lm.lat]);
     const g=gDots.append("g").attr("class","dot").attr("transform",`translate(${x},${y})`);
     g.append("circle").attr("class","dot-halo").attr("r",13/k);
-    g.append("circle").attr("class","dot-core").attr("r",8/k);
+    g.append("circle").attr("class","dot-core").attr("r",8/k).attr("stroke-width",1.8/k);
     g.on("mouseenter",(ev)=>showTip(ev,`${lm.emoji||"📍"} ${lm.name}`))
      .on("mousemove",moveTip).on("mouseleave",hideTip)
      .on("click",()=>focusLandmark(i));
@@ -6253,6 +6271,7 @@ function renderPlace(place){
       <div><h2>${place.names[0]}</h2><div class="count">유명한 곳 ${lms.length}곳을 찾았어요</div></div>
     </div>
     <div class="panel-actions">
+      <button class="btn-ghost" id="favToggle">☆ 즐겨찾기</button>
       <button class="btn-ghost" id="fitAll">📍 전체 보기</button>
       <button class="btn-ghost" id="clearBtn">↺ 처음으로</button>
     </div>
@@ -6275,6 +6294,10 @@ function renderPlace(place){
     frameTo(lms);
   });
   document.getElementById("clearBtn").addEventListener("click",resetAll);
+  const favT=document.getElementById("favToggle");
+  function syncFavT(){favT.textContent=isFavName(place.names[0])?"★ 즐겨찾기됨":"☆ 즐겨찾기";favT.classList.toggle("fav-on",isFavName(place.names[0]));}
+  syncFavT();
+  favT.addEventListener("click",()=>{toggleFavName(place.names[0],place.emoji);syncFavT();});
 }
 function renderFallback(label, lat, lng, nearby){
   panel.innerHTML=`
@@ -6282,7 +6305,7 @@ function renderFallback(label, lat, lng, nearby){
       <div class="flag">📍</div>
       <div><h2>${label}</h2><div class="count">지도에서 위치를 찾았어요</div></div>
     </div>
-    <div class="panel-actions"><button class="btn-ghost" id="clearBtn">↺ 처음으로</button></div>
+    <div class="panel-actions"><button class="btn-ghost" id="favToggle">☆ 즐겨찾기</button><button class="btn-ghost" id="clearBtn">↺ 처음으로</button></div>
     <div id="cards"></div>
     <div class="note">이 장소는 추천 목록에 없어서 <b>위치만</b> 표시했어요.
       아래는 근처의 이름난 장소예요(위키백과). 유명한 나라·도시로 검색하면 랜드마크를 더 자세히 볼 수 있어요.</div>`;
@@ -6295,6 +6318,10 @@ function renderFallback(label, lat, lng, nearby){
     cards.appendChild(el); if(markers[i]) markers[i].card=el;
   });
   document.getElementById("clearBtn").addEventListener("click",resetAll);
+  const favT=document.getElementById("favToggle");
+  function syncFavT(){favT.textContent=isFavName(label)?"★ 즐겨찾기됨":"☆ 즐겨찾기";favT.classList.toggle("fav-on",isFavName(label));}
+  syncFavT();
+  favT.addEventListener("click",()=>{toggleFavName(label,"📍");syncFavT();});
 }
 
 /* ---------- main search ---------- */
@@ -6345,7 +6372,7 @@ document.getElementById("go").addEventListener("click",()=>doSearch());
 document.getElementById("q").addEventListener("keydown",e=>{ if(e.key==="Enter") doSearch(); });
 document.getElementById("zin").addEventListener("click",()=>svg.transition().duration(250).call(zoom.scaleBy,1.6));
 document.getElementById("zout").addEventListener("click",()=>svg.transition().duration(250).call(zoom.scaleBy,1/1.6));
-document.getElementById("zreset").addEventListener("click",resetAll);
+document.getElementById("zreset").addEventListener("click",worldViewAll);
 
 /* ---------- QR ---------- */
 const APP_URL="https://gottkf1208.github.io/landmark-explorer/";
@@ -6406,6 +6433,31 @@ document.getElementById("glossClose").addEventListener("click",closeGloss);
 document.getElementById("glossX").addEventListener("click",closeGloss);
 glossModal.addEventListener("click",e=>{if(e.target===glossModal)closeGloss();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeGloss();});
+/* ---------- favorites ---------- */
+function getFavs(){try{return JSON.parse(localStorage.getItem("landmark_favs")||"[]")}catch(e){return[]}}
+function setFavs(a){try{localStorage.setItem("landmark_favs",JSON.stringify(a))}catch(e){}updateFavBtn();}
+function isFavName(nm){return getFavs().some(f=>f.name===nm);}
+function toggleFavName(nm,emoji){let a=getFavs();if(a.some(f=>f.name===nm))a=a.filter(f=>f.name!==nm);else a.push({name:nm,emoji:emoji||"📍"});setFavs(a);}
+function updateFavBtn(){const n=getFavs().length;const b=document.getElementById("favListBtn");if(b)b.textContent="⭐ 즐겨찾기"+(n?" ("+n+")":"");}
+function renderFavList(){
+  const list=document.getElementById("favList"),favs=getFavs();list.innerHTML="";
+  if(!favs.length){list.innerHTML='<div class="gloss-item"><span>아직 즐겨찾기한 곳이 없어요.<br>나라·도시를 검색한 뒤 <b>☆ 즐겨찾기</b>를 눌러 저장해요. 탐구활동 때 다시 찾아볼 수 있어요!</span></div>';return;}
+  favs.forEach(f=>{
+    const row=document.createElement("div");row.className="fav-row";
+    row.innerHTML='<button class="fav-go">'+f.emoji+' '+f.name+'</button><button class="fav-del" title="삭제">×</button>';
+    row.querySelector(".fav-go").addEventListener("click",()=>{closeFav();doSearch(f.name);});
+    row.querySelector(".fav-del").addEventListener("click",()=>{toggleFavName(f.name,f.emoji);renderFavList();});
+    list.appendChild(row);
+  });
+}
+const favModal=document.getElementById("favModal");
+function closeFav(){favModal.classList.remove("show");}
+document.getElementById("favListBtn").addEventListener("click",()=>{renderFavList();favModal.classList.add("show");});
+document.getElementById("favCloseBtn").addEventListener("click",closeFav);
+document.getElementById("favX").addEventListener("click",closeFav);
+favModal.addEventListener("click",e=>{if(e.target===favModal)closeFav();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeFav();});
+updateFavBtn();
 applyLayers();
 
 renderIntro();
