@@ -186,6 +186,32 @@
     color:#fff;font-family:inherit;font-weight:700;font-size:15px;border-radius:12px;padding:12px 26px;cursor:pointer}
   .qr-x{position:absolute;top:12px;right:15px;border:0;background:transparent;font-size:24px;
     color:var(--muted);cursor:pointer;line-height:1}
+
+  /* ---------- education layers ---------- */
+  .credit{left:50%;top:auto;bottom:10px;transform:translateX(-50%)}
+  .map-controls{position:absolute;left:14px;top:12px;display:flex;gap:7px;flex-wrap:wrap;z-index:12}
+  .mc{border:0;background:rgba(255,255,255,.92);backdrop-filter:blur(6px);border-radius:11px;padding:8px 12px;
+    font-size:12.5px;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;box-shadow:var(--shadow);transition:all .13s}
+  .mc.on{color:var(--aqua-deep);background:#eafaff}
+  .mc:hover{color:var(--ink)}
+  .coord{position:absolute;right:14px;top:12px;background:rgba(27,42,58,.82);backdrop-filter:blur(6px);color:#fff;
+    border-radius:11px;padding:8px 13px;font-size:13px;font-weight:600;box-shadow:var(--shadow);opacity:0;
+    transition:opacity .15s;pointer-events:none;z-index:12}
+  .coord.show{opacity:1}
+  .coord b{color:#7fe3ff;font-weight:800}
+  .grat{fill:none;stroke:#ffffff;stroke-width:.7px;opacity:.32}
+  .ref{fill:none;stroke:var(--orange);stroke-width:1.5px;opacity:.8;stroke-dasharray:6 4}
+  .ref-name{fill:var(--orange);font-size:12px;font-weight:800;paint-order:stroke;stroke:#fff;stroke-width:3px;font-family:inherit}
+  .deg{fill:#12507a;font-size:11px;font-weight:700;paint-order:stroke;stroke:#fff;stroke-width:3px;font-family:inherit;text-anchor:middle}
+  .cont{fill:#2b3a4b;font-size:15px;font-weight:800;paint-order:stroke;stroke:#fff;stroke-width:3.5px;font-family:inherit;text-anchor:middle;letter-spacing:1px}
+  .ocean{fill:#2f6fd0;font-size:13px;font-weight:700;font-style:italic;paint-order:stroke;stroke:#fff;stroke-width:3px;font-family:inherit;text-anchor:middle;letter-spacing:1px}
+  .gloss-card{max-width:440px;text-align:left}
+  .gloss-card h2{text-align:center}
+  .gloss-list{margin:6px 0 4px;max-height:56vh;overflow-y:auto}
+  .gloss-item{padding:11px 4px;border-bottom:1px solid #eef2f6}
+  .gloss-item:last-child{border-bottom:0}
+  .gloss-item b{display:block;font-size:14.5px;margin-bottom:3px;color:var(--ink)}
+  .gloss-item span{font-size:13px;color:var(--muted);line-height:1.55}
 </style>
 </head>
 <body>
@@ -213,10 +239,20 @@
 
   <div class="stage">
     <div class="credit">만든이 · 두목쿼카 / 쿼카연구회</div>
+    <div class="map-controls">
+      <button class="mc on" id="btnGrid">🌐 위경도</button>
+      <button class="mc on" id="btnGeo">🗺️ 대륙·대양</button>
+      <button class="mc" id="glossBtn">📖 용어</button>
+    </div>
+    <div class="coord" id="coord"></div>
     <svg id="map" viewBox="0 18 1000 388" preserveAspectRatio="xMidYMid meet" role="img"
          aria-label="세계 지도. 검색한 곳의 랜드마크가 빨간 점으로 표시됩니다.">
       <g id="viewport">
+        <g id="grid"></g>
         <g id="countries"></g>
+        <g id="geo"></g>
+        <g id="ref"></g>
+        <g id="gl"></g>
         <g id="dots"></g>
       </g>
     </svg>
@@ -238,6 +274,14 @@
     <div class="qr-box" id="qrBox"></div>
     <div class="qr-url" id="qrUrl"></div>
     <button class="qr-close" id="qrClose">닫기</button>
+  </div>
+</div>
+<div class="qr-modal" id="glossModal">
+  <div class="qr-card gloss-card">
+    <button class="qr-x" id="glossX" aria-label="닫기">×</button>
+    <h2>📖 지도 낱말 사전</h2>
+    <div class="gloss-list" id="glossList"></div>
+    <button class="qr-close" id="glossClose">닫기</button>
   </div>
 </div>
 
@@ -6071,6 +6115,8 @@ const svg = d3.select("#map");
 const viewport = d3.select("#viewport");
 const gCountries = d3.select("#countries");
 const gDots = d3.select("#dots");
+const gGrid=d3.select("#grid"), gRef=d3.select("#ref"), gGL=d3.select("#gl"), gGeo=d3.select("#geo");
+let showGrid=true, showGeo=true;
 const tip = document.getElementById("tip");
 const panel = document.getElementById("panel");
 
@@ -6079,6 +6125,18 @@ const countries = topojson.feature(WORLD, WORLD.objects.countries).features
     .filter(f => f.properties.name !== "Antarctica");
 gCountries.selectAll("path").data(countries).join("path")
     .attr("class","country").attr("d", path);
+
+/* ---------- graticule / continents / oceans ---------- */
+const graticule=d3.geoGraticule().step([30,30]);
+gGrid.append("path").datum(graticule).attr("class","grat").attr("d",path);
+gRef.append("path").datum({type:"LineString",coordinates:d3.range(-180,181,4).map(x=>[x,0])}).attr("class","ref").attr("d",path);
+gRef.append("path").datum({type:"LineString",coordinates:d3.range(-56,85,4).map(y=>[0,y])}).attr("class","ref").attr("d",path);
+function refT(lng,lat,txt,dy){const[x,y]=projection([lng,lat]);gRef.append("text").attr("class","ref-name").attr("x",x).attr("y",y).attr("dy",dy).text(txt);}
+refT(-168,0,"적도 0°","-0.4em"); refT(2,82,"본초자오선 0°","0");
+[-150,-120,-90,-60,-30,30,60,90,120,150].forEach(L=>{const[x,y]=projection([L,0]);gGL.append("text").attr("class","deg").attr("x",x).attr("y",y).attr("dy","1.05em").text(Math.abs(L)+"°"+(L<0?"W":"E"));});
+[60,30,-30].forEach(L=>{const[x,y]=projection([0,L]);gGL.append("text").attr("class","deg").attr("x",x).attr("y",y).attr("dx","0.6em").attr("dy","-0.3em").text(Math.abs(L)+"°"+(L<0?"S":"N"));});
+[["아시아",95,45],["유럽",16,53],["아프리카",21,3],["북아메리카",-100,46],["남아메리카",-61,-14],["오세아니아",134,-25]].forEach(([n,lng,lat])=>{const[x,y]=projection([lng,lat]);gGeo.append("text").attr("class","cont").attr("x",x).attr("y",y).text(n);});
+[["태평양",-140,10],["태평양",176,-25],["대서양",-28,-6],["인도양",78,-28],["북극해",6,82],["남극해",-30,-52]].forEach(([n,lng,lat])=>{const[x,y]=projection([lng,lat]);gGeo.append("text").attr("class","ocean").attr("x",x).attr("y",y).text(n);});
 
 /* ---------- zoom ---------- */
 const zoom = d3.zoom().scaleExtent([1,60])
@@ -6090,6 +6148,13 @@ const zoom = d3.zoom().scaleExtent([1,60])
       gDots.selectAll(".dot-core").attr("r", 8/k);
       gDots.selectAll(".dot-halo").attr("r", 13/k);
       gDots.selectAll(".dot-num").style("font-size", (9/k)+"px");
+      gGrid.selectAll(".grat").attr("stroke-width",.7/k);
+      gRef.selectAll(".ref").attr("stroke-width",1.5/k).attr("stroke-dasharray",(6/k)+" "+(4/k));
+      gRef.selectAll(".ref-name").style("font-size",(12/k)+"px");
+      gGL.selectAll(".deg").style("font-size",(11/k)+"px");
+      gGeo.selectAll(".cont").style("font-size",(15/k)+"px");
+      gGeo.selectAll(".ocean").style("font-size",(13/k)+"px");
+      gGeo.style("opacity",(showGeo && k<2.6)?1:0);
     });
 svg.call(zoom).on("dblclick.zoom", null);
 
@@ -6299,6 +6364,47 @@ document.getElementById("qrClose").addEventListener("click",closeQR);
 document.getElementById("qrX").addEventListener("click",closeQR);
 qrModal.addEventListener("click",e=>{ if(e.target===qrModal) closeQR(); });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeQR(); });
+
+/* ---------- education layers wiring ---------- */
+function applyLayers(){
+  gGrid.style("opacity",showGrid?1:0); gRef.style("opacity",showGrid?1:0); gGL.style("opacity",showGrid?1:0);
+  const k=d3.zoomTransform(svg.node()).k||1;
+  gGeo.style("opacity",(showGeo && k<2.6)?1:0);
+}
+document.getElementById("btnGrid").addEventListener("click",function(){showGrid=!showGrid;this.classList.toggle("on",showGrid);applyLayers();});
+document.getElementById("btnGeo").addEventListener("click",function(){showGeo=!showGeo;this.classList.toggle("on",showGeo);applyLayers();});
+const coordEl=document.getElementById("coord");
+svg.on("mousemove.coord",(ev)=>{
+  const p=d3.pointer(ev,svg.node());
+  const w=d3.zoomTransform(svg.node()).invert(p);
+  const ll=projection.invert(w);
+  if(ll&&isFinite(ll[0])&&isFinite(ll[1])){
+    const lng=ll[0],lat=ll[1];
+    coordEl.innerHTML=`위도 <b>${Math.abs(lat).toFixed(1)}°${lat>=0?'N':'S'}</b> · 경도 <b>${Math.abs(lng).toFixed(1)}°${lng>=0?'E':'W'}</b>`;
+    coordEl.classList.add("show");
+  }
+});
+svg.on("mouseleave.coord",()=>coordEl.classList.remove("show"));
+const GLOSS=[
+["🧭 위도 (가로선)","적도(0°)에서 북쪽·남쪽으로 얼마나 떨어졌는지 나타내는 좌표예요. 북위(N)·남위(S)로 쓰고 0°~90°까지 있어요."],
+["🧭 경도 (세로선)","본초자오선(0°)에서 동쪽·서쪽으로 얼마나 떨어졌는지 나타내는 좌표예요. 동경(E)·서경(W)로 쓰고 0°~180°까지 있어요."],
+["⭕ 적도","지구의 한가운데를 두르는 위도 0°선이에요. 북극과 남극에서 똑같이 떨어져 있어요."],
+["📏 본초자오선","경도 0°의 기준이 되는 세로선으로, 영국 그리니치 천문대를 지나요."],
+["🌊 5대양","아주 큰 바다 다섯 개예요 — 태평양·대서양·인도양·북극해·남극해."],
+["🗺️ 6대주","아주 큰 땅 여섯 개예요 — 아시아·유럽·아프리카·북아메리카·남아메리카·오세아니아."],
+["☀️ 북회귀선·남회귀선","태양이 가장 높이 뜨는 위도 23.5°N·23.5°S 선이에요."],
+["🌐 반구","적도를 기준으로 북반구·남반구, 본초자오선을 기준으로 동반구·서반구로 나눠요."]
+];
+const glossList=document.getElementById("glossList");
+GLOSS.forEach(([tm,df])=>{const el=document.createElement("div");el.className="gloss-item";el.innerHTML=`<b>${tm}</b><span>${df}</span>`;glossList.appendChild(el);});
+const glossModal=document.getElementById("glossModal");
+function closeGloss(){glossModal.classList.remove("show");}
+document.getElementById("glossBtn").addEventListener("click",()=>glossModal.classList.add("show"));
+document.getElementById("glossClose").addEventListener("click",closeGloss);
+document.getElementById("glossX").addEventListener("click",closeGloss);
+glossModal.addEventListener("click",e=>{if(e.target===glossModal)closeGloss();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeGloss();});
+applyLayers();
 
 renderIntro();
 </script>
