@@ -107,10 +107,10 @@
     filter:drop-shadow(0 1px 1px rgba(20,50,90,.18))}
   .dot-core{fill:var(--dot);stroke:#fff;stroke-width:1.6px}
   .dot-halo{fill:var(--dot);opacity:.28}
-  .dot-label{font-family:inherit;font-weight:700;fill:var(--ink);
-    paint-order:stroke;stroke:#fff;stroke-width:3.4px;stroke-linejoin:round;pointer-events:none}
+  .dot-num{font-weight:800;fill:#fff;pointer-events:none;text-anchor:middle;dominant-baseline:central}
   .dot{cursor:pointer}
   .dot.on .dot-core{fill:var(--orange);stroke:#fff}
+  .dot.on .dot-halo{opacity:.5}
 
   .map-badge{position:absolute;left:14px;bottom:12px;background:rgba(255,255,255,.92);
     backdrop-filter:blur(6px);border-radius:11px;padding:8px 12px;font-size:12px;color:var(--muted);
@@ -598,13 +598,13 @@ const zoom = d3.zoom().scaleExtent([1,60])
       const k = ev.transform.k;
       viewport.attr("transform", ev.transform);
       gCountries.selectAll(".country").attr("stroke-width", .5/k);
-      gDots.selectAll(".dot-core").attr("r", 5.4/k);
-      gDots.selectAll(".dot-halo").attr("r", 11/k).attr("stroke-width", 0);
-      gDots.selectAll(".dot-label").style("font-size", (11.5/k)+"px").attr("y", -12/k);
+      gDots.selectAll(".dot-core").attr("r", 8/k);
+      gDots.selectAll(".dot-halo").attr("r", 13/k);
+      gDots.selectAll(".dot-num").style("font-size", (9/k)+"px");
     });
 svg.call(zoom).on("dblclick.zoom", null);
 
-function frameTo(points, maxK=44, pad=0.82){
+function frameTo(points, maxK=16, pad=0.75){
   const P = points.map(p => projection([p.lng,p.lat]));
   const xs = P.map(p=>p[0]), ys = P.map(p=>p[1]);
   let x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys);
@@ -627,11 +627,10 @@ function addMarkers(landmarks, numbered=true){
   landmarks.forEach((lm,i)=>{
     const [x,y]=projection([lm.lng,lm.lat]);
     const g=gDots.append("g").attr("class","dot").attr("transform",`translate(${x},${y})`);
-    g.append("circle").attr("class","dot-halo").attr("r",11/k);
-    g.append("circle").attr("class","dot-core").attr("r",5.4/k);
-    g.append("text").attr("class","dot-label").attr("text-anchor","middle")
-      .attr("y",-12/k).style("font-size",(11.5/k)+"px")
-      .text((numbered?(i+1)+". ":"")+lm.name);
+    g.append("circle").attr("class","dot-halo").attr("r",13/k);
+    g.append("circle").attr("class","dot-core").attr("r",8/k);
+    g.append("text").attr("class","dot-num").style("font-size",(9/k)+"px")
+      .text(numbered?(i+1):"");
     g.on("mouseenter",(ev)=>showTip(ev,`${lm.emoji||"📍"} ${lm.name}`))
      .on("mousemove",moveTip).on("mouseleave",hideTip)
      .on("click",()=>focusLandmark(i));
@@ -790,3 +789,4 @@ renderIntro();
 </script>
 </body>
 </html>
+                                                                                                                                                      
