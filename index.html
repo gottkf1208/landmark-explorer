@@ -131,7 +131,7 @@
     display:grid;place-items:center;transition:transform .1s}
   .zoom-ctrl button:hover{background:#fff}
   .zoom-ctrl button:active{transform:scale(.92)}
-  .zoom-ctrl .reset{font-size:13px;font-weight:800}
+  .zoom-ctrl .reset{font-size:10.5px;font-weight:800;letter-spacing:-.6px}
 
   .toast{position:absolute;top:14px;left:50%;transform:translateX(-50%) translateY(-14px);
     background:#fff;border-radius:12px;padding:11px 18px;box-shadow:var(--shadow);font-size:14px;
@@ -228,22 +228,6 @@
   .country{stroke-width:.8px}
   .dot-core{stroke-width:1.6px}
   .ref{stroke-width:1.6px}
-
-  /* ---------- globe mode ---------- */
-  .seg{display:inline-flex;background:rgba(255,255,255,.92);backdrop-filter:blur(6px);border-radius:11px;padding:3px;box-shadow:var(--shadow);gap:2px}
-  .seg-b{border:0;background:transparent;border-radius:9px;padding:6px 12px;font-size:12.5px;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .13s}
-  .seg-b.on{background:linear-gradient(135deg,var(--aqua),var(--aqua-deep));color:#fff}
-  .stage.globe-on{background:radial-gradient(ellipse at 50% 42%,#1a2740 0%,#0b1220 68%,#070b14 100%)}
-  .stage.globe-on #map{background:transparent}
-  .g-sphere{fill:#0e1a30;stroke:#3a5680;stroke-width:1px;vector-effect:non-scaling-stroke}
-  .g-grat{fill:none;stroke:#6b86b0;stroke-width:.5px;opacity:.35;vector-effect:non-scaling-stroke}
-  .g-eq{fill:none;stroke:#e08aa0;stroke-width:1.2px;opacity:.75;vector-effect:non-scaling-stroke}
-  .g-country{stroke:#0b1220;stroke-width:.5px;vector-effect:non-scaling-stroke}
-  .g-cont{fill:#fff;font-size:16px;font-weight:800;paint-order:stroke;stroke:#0b1220;stroke-width:3.5px;font-family:inherit;text-anchor:middle;pointer-events:none}
-  .g-ocean{fill:#9fb4d6;font-size:12.5px;font-weight:700;font-style:italic;font-family:inherit;text-anchor:middle;opacity:.75;pointer-events:none;letter-spacing:1px}
-  .g-deg{fill:#c3d0e6;font-size:10px;font-family:inherit;text-anchor:middle;opacity:.7;paint-order:stroke;stroke:#0b1220;stroke-width:2.5px;pointer-events:none}
-  #globe{cursor:grab}
-  #globe:active{cursor:grabbing}
 </style>
 </head>
 <body>
@@ -272,7 +256,6 @@
   <div class="stage">
     <div class="credit">만든이 · 두목쿼카 / 쿼카연구회</div>
     <div class="map-controls">
-      <span class="seg"><button class="seg-b on" id="mFlat">🗺️ 평면</button><button class="seg-b" id="mGlobe">🌐 지구본</button></span>
       <button class="mc on" id="btnGrid">🌐 위경도</button>
       <button class="mc on" id="btnGeo">🗺️ 대륙·대양</button>
       <button class="mc" id="glossBtn">📖 용어</button>
@@ -289,7 +272,6 @@
         <g id="gl"></g>
         <g id="dots"></g>
       </g>
-      <g id="globe" style="display:none"></g>
     </svg>
     <div class="map-badge"><span class="d"></span> 빨간 점 = 랜드마크 위치</div>
     <div class="zoom-ctrl">
@@ -6160,7 +6142,6 @@ const gCountries = d3.select("#countries");
 const gDots = d3.select("#dots");
 const gGrid=d3.select("#grid"), gRef=d3.select("#ref"), gGL=d3.select("#gl"), gGeo=d3.select("#geo");
 let showGrid=true, showGeo=true;
-let mode="flat", curLandmarks=[];
 const tip = document.getElementById("tip");
 const panel = document.getElementById("panel");
 
@@ -6232,8 +6213,6 @@ function addMarkers(landmarks, numbered=true){
      .on("click",()=>focusLandmark(i));
     markers.push({lm, sel:g, card:null});
   });
-  curLandmarks=landmarks;
-  if(mode==="globe"){ renderGlobeDots(); rotateToPlace(landmarks); }
 }
 function focusLandmark(i){
   const m=markers[i]; if(!m) return;
@@ -6243,7 +6222,6 @@ function focusLandmark(i){
   if(m.card){ document.querySelectorAll(".card").forEach(c=>c.classList.remove("active"));
     m.card.classList.add("active"); m.card.scrollIntoView({block:"nearest",behavior:"smooth"}); }
   frameTo([m.lm], 30);
-  if(mode==="globe") rotateToPlace([m.lm]);
 }
 
 /* ---------- tooltip ---------- */
@@ -6386,7 +6364,7 @@ async function doSearch(raw){
     hideToast(); toast("인터넷 연결이 필요해요. 유명한 나라·도시(예: 프랑스)로 검색해 보세요.",true);
   }
 }
-function resetAll(){ clearMarkers(); renderIntro(); worldView(); document.getElementById("q").value=""; curLandmarks=[]; if(typeof renderGlobeDots==="function") renderGlobeDots(); }
+function resetAll(){ clearMarkers(); renderIntro(); worldView(); document.getElementById("q").value=""; }
 
 /* ---------- chips ---------- */
 const CHIPS=["대한민국","일본","프랑스","이집트","케냐","미국","캄보디아","뉴질랜드"];
@@ -6431,14 +6409,14 @@ document.getElementById("btnGrid").addEventListener("click",function(){showGrid=
 document.getElementById("btnGeo").addEventListener("click",function(){showGeo=!showGeo;this.classList.toggle("on",showGeo);applyLayers();});
 const coordEl=document.getElementById("coord");
 svg.on("mousemove.coord",(ev)=>{
-  const p=d3.pointer(ev,svg.node()); let ll;
-  if(mode==="globe"){ ll=gproj.invert(p); const rr=gproj.rotate(); if(ll&&d3.geoDistance(ll,[-rr[0],-rr[1]])>Math.PI/2) ll=null; }
-  else { ll=projection.invert(d3.zoomTransform(svg.node()).invert(p)); }
+  const p=d3.pointer(ev,svg.node());
+  const w=d3.zoomTransform(svg.node()).invert(p);
+  const ll=projection.invert(w);
   if(ll&&isFinite(ll[0])&&isFinite(ll[1])){
     const lng=ll[0],lat=ll[1];
     coordEl.innerHTML=`위도 <b>${Math.abs(lat).toFixed(1)}°${lat>=0?'N':'S'}</b> · 경도 <b>${Math.abs(lng).toFixed(1)}°${lng>=0?'E':'W'}</b>`;
     coordEl.classList.add("show");
-  } else { coordEl.classList.remove("show"); }
+  }
 });
 svg.on("mouseleave.coord",()=>coordEl.classList.remove("show"));
 const GLOSS=[
@@ -6486,69 +6464,6 @@ favModal.addEventListener("click",e=>{if(e.target===favModal)closeFav();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeFav();});
 updateFavBtn();
 applyLayers();
-
-/* ================= 3D GLOBE ================= */
-const CONT={"Fiji": "오세아니아", "Tanzania": "아프리카", "W. Sahara": "아프리카", "Canada": "북아메리카", "United States of America": "북아메리카", "Kazakhstan": "아시아", "Uzbekistan": "아시아", "Papua New Guinea": "오세아니아", "Indonesia": "아시아", "Argentina": "남아메리카", "Chile": "남아메리카", "Dem. Rep. Congo": "아프리카", "Somalia": "아프리카", "Kenya": "아프리카", "Sudan": "아프리카", "Chad": "아프리카", "Haiti": "북아메리카", "Dominican Rep.": "북아메리카", "Russia": "아시아", "Bahamas": "북아메리카", "Falkland Is.": "남아메리카", "Norway": "유럽", "Greenland": "북아메리카", "Fr. S. Antarctic Lands": "오세아니아", "Timor-Leste": "아시아", "South Africa": "아프리카", "Lesotho": "아프리카", "Mexico": "북아메리카", "Uruguay": "남아메리카", "Brazil": "남아메리카", "Bolivia": "남아메리카", "Peru": "남아메리카", "Colombia": "남아메리카", "Panama": "북아메리카", "Costa Rica": "북아메리카", "Nicaragua": "북아메리카", "Honduras": "북아메리카", "El Salvador": "북아메리카", "Guatemala": "북아메리카", "Belize": "북아메리카", "Venezuela": "남아메리카", "Guyana": "남아메리카", "Suriname": "남아메리카", "France": "유럽", "Ecuador": "남아메리카", "Puerto Rico": "북아메리카", "Jamaica": "북아메리카", "Cuba": "북아메리카", "Zimbabwe": "아프리카", "Botswana": "아프리카", "Namibia": "아프리카", "Senegal": "아프리카", "Mali": "아프리카", "Mauritania": "아프리카", "Benin": "아프리카", "Niger": "아프리카", "Nigeria": "아프리카", "Cameroon": "아프리카", "Togo": "아프리카", "Ghana": "아프리카", "Côte d'Ivoire": "아프리카", "Guinea": "아프리카", "Guinea-Bissau": "아프리카", "Liberia": "아프리카", "Sierra Leone": "아프리카", "Burkina Faso": "아프리카", "Central African Rep.": "아프리카", "Congo": "아프리카", "Gabon": "아프리카", "Eq. Guinea": "아프리카", "Zambia": "아프리카", "Malawi": "아프리카", "Mozambique": "아프리카", "eSwatini": "아프리카", "Angola": "아프리카", "Burundi": "아프리카", "Israel": "아시아", "Lebanon": "아시아", "Madagascar": "아프리카", "Palestine": "아시아", "Gambia": "아프리카", "Tunisia": "아프리카", "Algeria": "아프리카", "Jordan": "아시아", "United Arab Emirates": "아시아", "Qatar": "아시아", "Kuwait": "아시아", "Iraq": "아시아", "Oman": "아시아", "Vanuatu": "오세아니아", "Cambodia": "아시아", "Thailand": "아시아", "Laos": "아시아", "Myanmar": "아시아", "Vietnam": "아시아", "North Korea": "아시아", "South Korea": "아시아", "Mongolia": "아시아", "India": "아시아", "Bangladesh": "아시아", "Bhutan": "아시아", "Nepal": "아시아", "Pakistan": "아시아", "Afghanistan": "아시아", "Tajikistan": "아시아", "Kyrgyzstan": "아시아", "Turkmenistan": "아시아", "Iran": "아시아", "Syria": "아시아", "Armenia": "아시아", "Sweden": "유럽", "Belarus": "유럽", "Ukraine": "유럽", "Poland": "유럽", "Austria": "유럽", "Hungary": "유럽", "Moldova": "유럽", "Romania": "유럽", "Lithuania": "유럽", "Latvia": "유럽", "Estonia": "유럽", "Germany": "유럽", "Bulgaria": "유럽", "Greece": "유럽", "Turkey": "아시아", "Albania": "유럽", "Croatia": "유럽", "Switzerland": "유럽", "Luxembourg": "유럽", "Belgium": "유럽", "Netherlands": "유럽", "Portugal": "유럽", "Spain": "유럽", "Ireland": "유럽", "New Caledonia": "오세아니아", "Solomon Is.": "오세아니아", "New Zealand": "오세아니아", "Australia": "오세아니아", "Sri Lanka": "아시아", "China": "아시아", "Taiwan": "아시아", "Italy": "유럽", "Denmark": "유럽", "United Kingdom": "유럽", "Iceland": "유럽", "Azerbaijan": "아시아", "Georgia": "아시아", "Philippines": "아시아", "Malaysia": "아시아", "Brunei": "아시아", "Slovenia": "유럽", "Finland": "유럽", "Slovakia": "유럽", "Czechia": "유럽", "Eritrea": "아프리카", "Japan": "아시아", "Paraguay": "남아메리카", "Yemen": "아시아", "Saudi Arabia": "아시아", "N. Cyprus": "아시아", "Cyprus": "유럽", "Morocco": "아프리카", "Egypt": "아프리카", "Libya": "아프리카", "Ethiopia": "아프리카", "Djibouti": "아프리카", "Somaliland": "아프리카", "Uganda": "아프리카", "Rwanda": "아프리카", "Bosnia and Herz.": "유럽", "Macedonia": "유럽", "Serbia": "유럽", "Montenegro": "유럽", "Kosovo": "유럽", "Trinidad and Tobago": "남아메리카", "S. Sudan": "아프리카"};
-const CC={"아시아":"#e8703a","유럽":"#5b9bd5","아프리카":"#f2c14e","북아메리카":"#b57edc","남아메리카":"#6cc06c","오세아니아":"#e77fbe"};
-const gproj=d3.geoOrthographic().translate([500,250]).scale(238).clipAngle(90).rotate([-10,-16]);
-const gpath=d3.geoPath(gproj);
-const gGlobe=d3.select("#globe");
-const gSphere=gGlobe.append("path").attr("class","g-sphere").datum({type:"Sphere"});
-const gGratP=gGlobe.append("path").attr("class","g-grat").datum(d3.geoGraticule().step([15,15]));
-const gEqP=gGlobe.append("path").attr("class","g-eq").datum({type:"LineString",coordinates:d3.range(-180,181,2).map(x=>[x,0])});
-const gLand=gGlobe.append("g");
-gLand.selectAll("path").data(countries).join("path").attr("class","g-country").attr("fill",d=>CC[CONT[d.properties.name]]||"#43506a");
-const gLbl=gGlobe.append("g");
-[["아시아",95,45,"g-cont"],["유럽",16,52,"g-cont"],["아프리카",21,3,"g-cont"],["북아메리카",-100,46,"g-cont"],["남아메리카",-61,-14,"g-cont"],["오세아니아",134,-25,"g-cont"],["태평양",-150,6,"g-ocean"],["대서양",-30,-4,"g-ocean"],["인도양",78,-28,"g-ocean"],["북극해",0,82,"g-ocean"],["남극해",30,-62,"g-ocean"]].forEach(a=>gLbl.append("text").attr("class",a[3]).attr("data-lng",a[1]).attr("data-lat",a[2]).text(a[0]));
-const gDeg=gGlobe.append("g");
-[[0,70],[0,50],[0,30],[0,-10],[0,-30],[-40,0],[-20,0],[0,0],[40,0],[60,0],[80,0],[100,0]].forEach(d=>{var lng=d[0],lat=d[1];var lbl=lat!==0?(Math.abs(lat)+"°"+(lat>0?"N":"S")):(lng===0?"0°":Math.abs(lng)+"°"+(lng>0?"E":"W"));gDeg.append("text").attr("class","g-deg").attr("data-lng",lng).attr("data-lat",lat).text(lbl);});
-const gGd=gGlobe.append("g");
-function frontVis(lng,lat){var r=gproj.rotate();return d3.geoDistance([lng,lat],[-r[0],-r[1]])<Math.PI/2;}
-function posSel(sel){sel.each(function(){var lng=+this.getAttribute("data-lng"),lat=+this.getAttribute("data-lat");var p=gproj([lng,lat]);var v=frontVis(lng,lat);var s=d3.select(this);if(p) s.attr("x",p[0]).attr("y",p[1]).attr("transform","translate("+p[0]+","+p[1]+")");s.style("display",v?null:"none");});}
-function renderGlobe(){
-  gSphere.attr("d",gpath); gGratP.attr("d",gpath); gEqP.attr("d",gpath);
-  gLand.selectAll("path").attr("d",gpath);
-  gLbl.selectAll("text").each(function(){var lng=+this.getAttribute("data-lng"),lat=+this.getAttribute("data-lat");var p=gproj([lng,lat]);d3.select(this).attr("x",p[0]).attr("y",p[1]).style("display",frontVis(lng,lat)?null:"none");});
-  gDeg.selectAll("text").each(function(){var lng=+this.getAttribute("data-lng"),lat=+this.getAttribute("data-lat");var p=gproj([lng,lat]);d3.select(this).attr("x",p[0]).attr("y",p[1]).style("display",frontVis(lng,lat)?null:"none");});
-  gGd.selectAll("g.gd").each(function(){var lng=+this.getAttribute("data-lng"),lat=+this.getAttribute("data-lat");var p=gproj([lng,lat]);d3.select(this).attr("transform","translate("+p[0]+","+p[1]+")").style("display",frontVis(lng,lat)?null:"none");});
-}
-function renderGlobeDots(){
-  var sel=gGd.selectAll("g.gd").data(curLandmarks,function(d){return d.name+d.lat;});
-  sel.exit().remove();
-  var e=sel.enter().append("g").attr("class","gd");
-  e.append("circle").attr("class","dot-halo").attr("r",7);
-  e.append("circle").attr("class","dot-core").attr("r",4.5).attr("stroke-width",1.5);
-  gGd.selectAll("g.gd").attr("data-lng",function(d){return d.lng;}).attr("data-lat",function(d){return d.lat;});
-  if(mode==="globe") renderGlobe();
-}
-function rotateToPlace(lms){
-  if(!lms||!lms.length){renderGlobe();return;}
-  var clng=d3.mean(lms,function(d){return d.lng;}),clat=d3.mean(lms,function(d){return d.lat;});
-  var r0=gproj.rotate(),r1=[-clng,-clat];
-  d3.transition().duration(1000).tween("rot",function(){var i=d3.interpolate(r0,r1);return function(tt){gproj.rotate(i(tt));renderGlobe();};});
-}
-var gdrag=d3.drag()
-  .on("start",function(ev){gproj.__r0=gproj.rotate();gproj.__q=[ev.x,ev.y];})
-  .on("drag",function(ev){var s=75/gproj.scale();var r=gproj.__r0;gproj.rotate([r[0]+(ev.x-gproj.__q[0])*s,Math.max(-90,Math.min(90,r[1]-(ev.y-gproj.__q[1])*s))]);renderGlobe();});
-function setMode(m){
-  mode=m;
-  document.getElementById("mFlat").classList.toggle("on",m==="flat");
-  document.getElementById("mGlobe").classList.toggle("on",m==="globe");
-  var st=document.querySelector(".stage");
-  if(m==="globe"){
-    st.classList.add("globe-on"); svg.attr("viewBox","150 0 700 500");
-    d3.select("#viewport").style("display","none"); gGlobe.style("display",null);
-    svg.on(".zoom",null); svg.call(gdrag);
-    renderGlobeDots(); if(curLandmarks.length) rotateToPlace(curLandmarks); else renderGlobe();
-  }else{
-    st.classList.remove("globe-on"); svg.attr("viewBox","0 18 1000 388");
-    gGlobe.style("display","none"); d3.select("#viewport").style("display",null);
-    svg.on(".drag",null); svg.call(zoom);
-  }
-}
-document.getElementById("mFlat").addEventListener("click",function(){setMode("flat");});
-document.getElementById("mGlobe").addEventListener("click",function(){setMode("globe");});
-renderGlobe();
 
 renderIntro();
 </script>
