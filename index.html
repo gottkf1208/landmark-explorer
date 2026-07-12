@@ -267,6 +267,23 @@
   .lm-extra b{font-size:11px;color:var(--dot)}
   .lm-close{position:absolute;top:8px;right:8px;width:26px;height:26px;border:0;border-radius:50%;background:rgba(15,25,40,.5);
     color:#fff;font-size:15px;cursor:pointer;z-index:2;line-height:1}
+
+  /* ---------- continent country drawer ---------- */
+  .ctry-drawer{position:absolute;top:0;right:0;height:100%;width:300px;max-width:82%;background:rgba(255,255,255,.98);
+    backdrop-filter:blur(10px);box-shadow:-10px 0 34px rgba(23,42,58,.16);transform:translateX(102%);transition:transform .26s;
+    overflow-y:auto;z-index:22}
+  .ctry-drawer.show{transform:none}
+  .ctry-head{position:sticky;top:0;background:#fff;display:flex;align-items:center;justify-content:space-between;
+    padding:15px 16px;font-size:15px;font-weight:800;color:var(--ink);border-bottom:1px solid #eef2f6;z-index:2}
+  .ctry-x{border:0;background:#f1f5f9;width:30px;height:30px;border-radius:50%;font-size:17px;color:var(--muted);cursor:pointer;line-height:1}
+  .ctry-hint{padding:10px 16px 2px;font-size:12px;color:var(--muted)}
+  .ctry-body{padding:6px 14px 22px}
+  .ctry-sec{margin-top:15px}
+  .ctry-title{font-size:12.5px;font-weight:800;color:var(--aqua-deep);margin-bottom:9px;padding-left:2px}
+  .ctry-wrap{display:flex;flex-wrap:wrap;gap:6px}
+  .ctry-chip{border:1px solid #e3ebf3;background:#fff;border-radius:999px;padding:7px 12px;font-size:13px;font-weight:600;
+    color:var(--ink);cursor:pointer;font-family:inherit;transition:all .12s;white-space:nowrap}
+  .ctry-chip:hover{border-color:var(--aqua);background:#f0fbfe;color:var(--aqua-deep)}
 </style>
 </head>
 <body>
@@ -300,8 +317,14 @@
       <button class="mc on" id="btnGeo">🗺️ 대륙·대양</button>
       <button class="mc" id="glossBtn">📖 용어</button>
       <button class="mc" id="favListBtn">⭐ 즐겨찾기</button>
+      <button class="mc" id="ctryBtn">🌎 나라 목록</button>
     </div>
     <div class="coord" id="coord"></div>
+    <div class="ctry-drawer" id="ctryDrawer">
+      <div class="ctry-head"><span>🌎 대륙별 나라 찾기</span><button class="ctry-x" id="ctryX" aria-label="닫기">×</button></div>
+      <div class="ctry-hint">나라 이름을 모를 땐 여기서 골라 보세요!</div>
+      <div class="ctry-body" id="ctryBody"></div>
+    </div>
     <div class="lm-info" id="lmInfo">
       <button class="lm-close" id="lmClose" aria-label="닫기">×</button>
       <img class="lm-photo" id="lmPhoto" alt="">
@@ -2751,7 +2774,8 @@ const DB = {
           "name": "김밥",
           "emoji": "🍙"
         }
-      ]
+      ],
+      "continent": "아시아"
     },
     {
       "id": "seoul",
@@ -2951,7 +2975,8 @@ const DB = {
           "name": "타코야키",
           "emoji": "🐙"
         }
-      ]
+      ],
+      "continent": "아시아"
     },
     {
       "id": "tokyo",
@@ -3077,7 +3102,8 @@ const DB = {
           "name": "딤섬",
           "emoji": "🥟"
         }
-      ]
+      ],
+      "continent": "아시아"
     },
     {
       "id": "france",
@@ -3151,7 +3177,8 @@ const DB = {
           "name": "크레페",
           "emoji": "🥞"
         }
-      ]
+      ],
+      "continent": "유럽"
     },
     {
       "id": "paris",
@@ -3282,7 +3309,8 @@ const DB = {
           "name": "홍차",
           "emoji": "🫖"
         }
-      ]
+      ],
+      "continent": "유럽"
     },
     {
       "id": "london",
@@ -3415,7 +3443,8 @@ const DB = {
           "name": "티라미수",
           "emoji": "🍮"
         }
-      ]
+      ],
+      "continent": "유럽"
     },
     {
       "id": "rome",
@@ -3551,7 +3580,8 @@ const DB = {
           "name": "도넛",
           "emoji": "🍩"
         }
-      ]
+      ],
+      "continent": "북아메리카"
     },
     {
       "id": "newyork",
@@ -3681,7 +3711,8 @@ const DB = {
           "name": "물로키야",
           "emoji": "🥬"
         }
-      ]
+      ],
+      "continent": "아프리카"
     },
     {
       "id": "greece",
@@ -3729,7 +3760,8 @@ const DB = {
           "name": "요거트",
           "emoji": "🥛"
         }
-      ]
+      ],
+      "continent": "유럽"
     },
     {
       "id": "germany",
@@ -3782,7 +3814,8 @@ const DB = {
           "name": "감자요리",
           "emoji": "🥔"
         }
-      ]
+      ],
+      "continent": "유럽"
     },
     {
       "id": "spain",
@@ -3839,7 +3872,8 @@ const DB = {
           "name": "가스파초",
           "emoji": "🍅"
         }
-      ]
+      ],
+      "continent": "유럽"
     },
     {
       "id": "australia",
@@ -3900,7 +3934,8 @@ const DB = {
           "name": "래밍턴",
           "emoji": "🍰"
         }
-      ]
+      ],
+      "continent": "오세아니아"
     },
     {
       "id": "india",
@@ -3956,7 +3991,8 @@ const DB = {
           "name": "라씨",
           "emoji": "🥛"
         }
-      ]
+      ],
+      "continent": "아시아"
     },
     {
       "id": "indonesia",
@@ -4028,7 +4064,8 @@ const DB = {
           "name": "가도가도",
           "emoji": "🥗"
         }
-      ]
+      ],
+      "continent": "아시아"
     },
     {
       "id": "peru",
@@ -4072,7 +4109,8 @@ const DB = {
           "name": "추로스",
           "emoji": "🥖"
         }
-      ]
+      ],
+      "continent": "남아메리카"
     },
     {
       "id": "brazil",
@@ -4124,7 +4162,8 @@ const DB = {
           "name": "아사이",
           "emoji": "🫐"
         }
-      ]
+      ],
+      "continent": "남아메리카"
     },
     {
       "id": "russia",
@@ -4176,7 +4215,8 @@ const DB = {
           "name": "캐비어",
           "emoji": "🐟"
         }
-      ]
+      ],
+      "continent": "아시아"
     },
     {
       "id": "turkey",
@@ -4230,7 +4270,8 @@ const DB = {
           "name": "튀르키예 아이스크림",
           "emoji": "🍦"
         }
-      ]
+      ],
+      "continent": "아시아"
     },
     {
       "id": "thailand",
@@ -4283,7 +4324,8 @@ const DB = {
           "name": "망고 스티키 라이스",
           "emoji": "🥭"
         }
-      ]
+      ],
+      "continent": "아시아"
     },
     {
       "id": "uae",
@@ -4338,7 +4380,8 @@ const DB = {
           "name": "대추야자",
           "emoji": "🌴"
         }
-      ]
+      ],
+      "continent": "아시아"
     },
     {
       "id": "netherlands",
@@ -4392,7 +4435,8 @@ const DB = {
           "name": "감자튀김",
           "emoji": "🍟"
         }
-      ]
+      ],
+      "continent": "유럽"
     },
     {
       "id": "singapore",
@@ -4444,7 +4488,8 @@ const DB = {
           "name": "카야토스트",
           "emoji": "🍞"
         }
-      ]
+      ],
+      "continent": "아시아"
     },
     {
       "id": "canada",
@@ -4496,7 +4541,8 @@ const DB = {
           "name": "비버테일",
           "emoji": "🧇"
         }
-      ]
+      ],
+      "continent": "북아메리카"
     },
     {
       "id": "mexico",
@@ -4544,7 +4590,8 @@ const DB = {
           "name": "퀘사디야",
           "emoji": "🫓"
         }
-      ]
+      ],
+      "continent": "북아메리카"
     },
     {
       "id": "switzerland",
@@ -4588,7 +4635,8 @@ const DB = {
           "name": "뢰스티",
           "emoji": "🥔"
         }
-      ]
+      ],
+      "continent": "유럽"
     },
     {
       "id": "vietnam",
@@ -4632,7 +4680,8 @@ const DB = {
           "name": "스프링롤",
           "emoji": "🥢"
         }
-      ]
+      ],
+      "continent": "아시아"
     },
     {
       "id": "southafrica",
@@ -4673,7 +4722,8 @@ const DB = {
           "name": "보보티",
           "emoji": "🍛"
         }
-      ]
+      ],
+      "continent": "아프리카"
     },
     {
       "id": "nigeria",
@@ -4737,7 +4787,8 @@ const DB = {
           "name": "에구시 수프",
           "emoji": "🥣"
         }
-      ]
+      ],
+      "continent": "아프리카"
     },
     {
       "id": "kenya",
@@ -4797,7 +4848,8 @@ const DB = {
           "name": "필라우",
           "emoji": "🍛"
         }
-      ]
+      ],
+      "continent": "아프리카"
     },
     {
       "id": "morocco",
@@ -4865,7 +4917,8 @@ const DB = {
           "name": "민트티",
           "emoji": "🫖"
         }
-      ]
+      ],
+      "continent": "아프리카"
     },
     {
       "id": "tanzania",
@@ -4925,7 +4978,8 @@ const DB = {
           "name": "필라우",
           "emoji": "🍛"
         }
-      ]
+      ],
+      "continent": "아프리카"
     },
     {
       "id": "ethiopia",
@@ -4985,7 +5039,8 @@ const DB = {
           "name": "에티오피아 커피",
           "emoji": "☕"
         }
-      ]
+      ],
+      "continent": "아프리카"
     },
     {
       "id": "zimbabwe",
@@ -5033,7 +5088,8 @@ const DB = {
           "name": "비트록(말린 고기)",
           "emoji": "🥩"
         }
-      ]
+      ],
+      "continent": "아프리카"
     },
     {
       "id": "denmark",
@@ -5093,7 +5149,8 @@ const DB = {
           "name": "핫도그",
           "emoji": "🌭"
         }
-      ]
+      ],
+      "continent": "유럽"
     },
     {
       "id": "norway",
@@ -5149,7 +5206,8 @@ const DB = {
           "name": "쇼트불레르(미트볼)",
           "emoji": "🍖"
         }
-      ]
+      ],
+      "continent": "유럽"
     },
     {
       "id": "sweden",
@@ -5209,7 +5267,8 @@ const DB = {
           "name": "셈라",
           "emoji": "🧁"
         }
-      ]
+      ],
+      "continent": "유럽"
     },
     {
       "id": "finland",
@@ -5269,7 +5328,8 @@ const DB = {
           "name": "코르바푸스티(롤빵)",
           "emoji": "🥐"
         }
-      ]
+      ],
+      "continent": "유럽"
     },
     {
       "id": "austria",
@@ -5329,7 +5389,8 @@ const DB = {
           "name": "소시지",
           "emoji": "🌭"
         }
-      ]
+      ],
+      "continent": "유럽"
     },
     {
       "id": "portugal",
@@ -5389,7 +5450,8 @@ const DB = {
           "name": "정어리구이",
           "emoji": "🐟"
         }
-      ]
+      ],
+      "continent": "유럽"
     },
     {
       "id": "ireland",
@@ -5449,7 +5511,8 @@ const DB = {
           "name": "기네스",
           "emoji": "🍺"
         }
-      ]
+      ],
+      "continent": "유럽"
     },
     {
       "id": "poland",
@@ -5509,7 +5572,8 @@ const DB = {
           "name": "파치키",
           "emoji": "🍩"
         }
-      ]
+      ],
+      "continent": "유럽"
     },
     {
       "id": "czech",
@@ -5571,7 +5635,8 @@ const DB = {
           "name": "체코 맥주",
           "emoji": "🍺"
         }
-      ]
+      ],
+      "continent": "유럽"
     },
     {
       "id": "hungary",
@@ -5631,7 +5696,8 @@ const DB = {
           "name": "도보스 토르테",
           "emoji": "🍰"
         }
-      ]
+      ],
+      "continent": "유럽"
     },
     {
       "id": "croatia",
@@ -5679,7 +5745,8 @@ const DB = {
           "name": "검은 리조또",
           "emoji": "🍚"
         }
-      ]
+      ],
+      "continent": "유럽"
     },
     {
       "id": "iceland",
@@ -5735,7 +5802,8 @@ const DB = {
           "name": "라이 브레드",
           "emoji": "🍞"
         }
-      ]
+      ],
+      "continent": "유럽"
     },
     {
       "id": "monaco",
@@ -5783,7 +5851,8 @@ const DB = {
           "name": "니수아즈 샐러드",
           "emoji": "🥗"
         }
-      ]
+      ],
+      "continent": "유럽"
     },
     {
       "id": "vatican",
@@ -5832,7 +5901,8 @@ const DB = {
           "name": "젤라토",
           "emoji": "🍨"
         }
-      ]
+      ],
+      "continent": "유럽"
     },
     {
       "id": "luxembourg",
@@ -5880,7 +5950,8 @@ const DB = {
           "name": "케이크",
           "emoji": "🍰"
         }
-      ]
+      ],
+      "continent": "유럽"
     },
     {
       "id": "jordan",
@@ -5940,7 +6011,8 @@ const DB = {
           "name": "마클루바",
           "emoji": "🍚"
         }
-      ]
+      ],
+      "continent": "아시아"
     },
     {
       "id": "cambodia",
@@ -5992,7 +6064,8 @@ const DB = {
           "name": "바이 사이 추룩",
           "emoji": "🍚"
         }
-      ]
+      ],
+      "continent": "아시아"
     },
     {
       "id": "newzealand",
@@ -6053,7 +6126,8 @@ const DB = {
           "name": "피시앤칩스",
           "emoji": "🍟"
         }
-      ]
+      ],
+      "continent": "오세아니아"
     },
     {
       "id": "argentina",
@@ -6113,7 +6187,8 @@ const DB = {
           "name": "마테차",
           "emoji": "🧉"
         }
-      ]
+      ],
+      "continent": "남아메리카"
     },
     {
       "id": "chile",
@@ -6173,7 +6248,8 @@ const DB = {
           "name": "파스텔 데 초클로",
           "emoji": "🌽"
         }
-      ]
+      ],
+      "continent": "남아메리카"
     }
   ]
 };
@@ -6517,6 +6593,30 @@ favModal.addEventListener("click",e=>{if(e.target===favModal)closeFav();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeFav();});
 updateFavBtn();
 applyLayers();
+
+/* ============ continent country list ============ */
+(function(){
+  var CONTS=["아시아","유럽","아프리카","북아메리카","남아메리카","오세아니아"];
+  var body=document.getElementById("ctryBody"), groups={};
+  DB.places.forEach(function(p){ if(p.continent){ (groups[p.continent]=groups[p.continent]||[]).push(p); } });
+  CONTS.forEach(function(c){
+    var list=groups[c]; if(!list||!list.length) return;
+    list.sort(function(a,b){ return a.names[0].localeCompare(b.names[0],"ko"); });
+    var sec=document.createElement("div"); sec.className="ctry-sec";
+    var h=document.createElement("div"); h.className="ctry-title"; h.textContent=c+" · "+list.length+"개국"; sec.appendChild(h);
+    var wrap=document.createElement("div"); wrap.className="ctry-wrap";
+    list.forEach(function(p){
+      var b=document.createElement("button"); b.className="ctry-chip"; b.textContent=(p.emoji||"")+" "+p.names[0];
+      b.addEventListener("click",function(){ closeCtry(); doSearch(p.names[0]); });
+      wrap.appendChild(b);
+    });
+    sec.appendChild(wrap); body.appendChild(sec);
+  });
+})();
+var ctryDrawer=document.getElementById("ctryDrawer");
+function closeCtry(){ ctryDrawer.classList.remove("show"); document.getElementById("ctryBtn").classList.remove("on"); }
+document.getElementById("ctryBtn").addEventListener("click",function(){ var on=ctryDrawer.classList.toggle("show"); this.classList.toggle("on",on); });
+document.getElementById("ctryX").addEventListener("click",closeCtry);
 
 /* ============ landmark weather + photo ============ */
 function hideLandmarkInfo(){ var b=document.getElementById("lmInfo"); if(b) b.classList.remove("show"); }
