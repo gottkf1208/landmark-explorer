@@ -10664,7 +10664,7 @@ function frameTo(points, maxK=16, pad=0.75){
   svg.transition().duration(760).call(zoom.transform, t);
 }
 function worldView(){ svg.transition().duration(700).call(zoom.transform, d3.zoomIdentity); }
-function worldViewAll(){ markers.forEach(x=>x.sel.classed("blink",false)); gDots.classed("focusing",false); document.querySelectorAll(".card").forEach(c=>c.classList.remove("active")); worldView(); }
+function worldViewAll(){ markers.forEach(x=>{ if(x.sel) x.sel.classed("blink",false); }); gDots.classed("focusing",false); document.querySelectorAll(".card").forEach(c=>c.classList.remove("active")); worldView(); }
 
 /* ---------- markers (opt-in pins) ---------- */
 let markers = [];           // {lm, sel, card, pinned}
