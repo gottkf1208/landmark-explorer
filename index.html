@@ -251,6 +251,20 @@
   .card.pinned .pin-tag::before{content:"📍 찍음 · 다시 누르면 빼기";color:var(--dot)}
   .card.pinned{border-color:var(--dot);background:#fff5f5;box-shadow:0 6px 18px rgba(239,45,60,.14)}
   #fitAll b{color:var(--dot);font-weight:800}
+
+  /* ---------- landmark weather + photo card ---------- */
+  .lm-info{position:absolute;right:14px;top:52px;width:238px;background:rgba(255,255,255,.97);backdrop-filter:blur(8px);
+    border-radius:16px;box-shadow:var(--shadow);overflow:hidden;opacity:0;transform:translateY(-6px);transition:all .2s;pointer-events:none;z-index:16}
+  .lm-info.show{opacity:1;transform:none;pointer-events:auto}
+  .lm-photo{width:100%;height:142px;object-fit:cover;display:none;background:#e7edf5}
+  .lm-photo.show{display:block}
+  .lm-meta{padding:11px 13px 13px}
+  .lm-name{font-size:14.5px;font-weight:800;color:var(--ink);line-height:1.3}
+  .lm-sub{font-size:11.5px;color:var(--muted);margin:2px 0 8px}
+  .lm-weather{font-size:13px;color:var(--muted);line-height:1.5}
+  .lm-weather b{color:var(--ink);font-size:16px}
+  .lm-close{position:absolute;top:8px;right:8px;width:26px;height:26px;border:0;border-radius:50%;background:rgba(15,25,40,.5);
+    color:#fff;font-size:15px;cursor:pointer;z-index:2;line-height:1}
 </style>
 </head>
 <body>
@@ -286,6 +300,15 @@
       <button class="mc" id="favListBtn">⭐ 즐겨찾기</button>
     </div>
     <div class="coord" id="coord"></div>
+    <div class="lm-info" id="lmInfo">
+      <button class="lm-close" id="lmClose" aria-label="닫기">×</button>
+      <img class="lm-photo" id="lmPhoto" alt="">
+      <div class="lm-meta">
+        <div class="lm-name" id="lmName"></div>
+        <div class="lm-sub" id="lmSub"></div>
+        <div class="lm-weather" id="lmWeather"></div>
+      </div>
+    </div>
     <svg id="map" viewBox="0 18 1000 388" preserveAspectRatio="xMidYMid meet" role="img"
          aria-label="세계 지도. 검색한 곳의 랜드마크가 빨간 점으로 표시됩니다.">
       <g id="viewport">
@@ -6241,7 +6264,7 @@ function drawPin(i){
 }
 function togglePin(i){
   const m=markers[i]; if(!m) return;
-  if(m.pinned){ if(m.sel){m.sel.remove(); m.sel=null;} m.pinned=false; if(m.card) m.card.classList.remove("pinned"); }
+  if(m.pinned){ if(m.sel){m.sel.remove(); m.sel=null;} m.pinned=false; if(m.card) m.card.classList.remove("pinned"); hideLandmarkInfo(); }
   else { drawPin(i); m.pinned=true; if(m.card) m.card.classList.add("pinned"); focusPin(i); }
   syncGlobePins(); updatePinUI();
 }
@@ -6250,6 +6273,7 @@ function focusPin(i){
   markers.forEach(x=>{ if(x.sel) x.sel.classed("blink",false); });
   if(m.sel) m.sel.classed("blink",true).raise();
   if(mode==="globe") rotateToPlace([m.lm]); else frameTo([m.lm],28);
+  showLandmarkInfo(m.lm);
 }
 
 /* ---------- tooltip ---------- */
@@ -6391,7 +6415,7 @@ async function doSearch(raw){
     hideToast(); toast("인터넷 연결이 필요해요. 유명한 나라·도시(예: 프랑스)로 검색해 보세요.",true);
   }
 }
-function resetAll(){ clearMarkers(); renderIntro(); worldView(); document.getElementById("q").value=""; curLandmarks=[]; if(typeof renderGlobeDots==="function") renderGlobeDots(); }
+function resetAll(){ clearMarkers(); renderIntro(); worldView(); document.getElementById("q").value=""; curLandmarks=[]; if(typeof renderGlobeDots==="function") renderGlobeDots(); hideLandmarkInfo(); }
 
 /* ---------- chips ---------- */
 const CHIPS=["대한민국","일본","프랑스","이집트","케냐","미국","캄보디아","뉴질랜드"];
@@ -6491,6 +6515,45 @@ favModal.addEventListener("click",e=>{if(e.target===favModal)closeFav();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeFav();});
 updateFavBtn();
 applyLayers();
+
+/* ============ landmark weather + photo ============ */
+function hideLandmarkInfo(){ var b=document.getElementById("lmInfo"); if(b) b.classList.remove("show"); }
+function wcode(n){
+  if(n===0) return {e:"☀️",d:"맑음"};
+  if(n<=2) return {e:"🌤️",d:"대체로 맑음"};
+  if(n===3) return {e:"☁️",d:"흐림"};
+  if(n===45||n===48) return {e:"🌫️",d:"안개"};
+  if(n>=51&&n<=57) return {e:"🌦️",d:"이슬비"};
+  if(n>=61&&n<=67) return {e:"🌧️",d:"비"};
+  if(n>=71&&n<=77) return {e:"🌨️",d:"눈"};
+  if(n>=80&&n<=82) return {e:"🌧️",d:"소나기"};
+  if(n>=85&&n<=86) return {e:"🌨️",d:"눈"};
+  if(n>=95) return {e:"⛈️",d:"천둥번개"};
+  return {e:"🌡️",d:"현재 날씨"};
+}
+async function showLandmarkInfo(lm){
+  var box=document.getElementById("lmInfo");
+  document.getElementById("lmName").textContent=(lm.emoji||"📍")+" "+lm.name;
+  document.getElementById("lmSub").textContent=(lm.city?lm.city+" · ":"")+"지금 날씨";
+  document.getElementById("lmWeather").innerHTML='<span class="spinner"></span> 불러오는 중…';
+  var photo=document.getElementById("lmPhoto"); photo.classList.remove("show"); photo.removeAttribute("src");
+  box.classList.add("show");
+  var token=lm.name+"|"+lm.lat; box.dataset.token=token;
+  try{
+    var w=await fetch("https://api.open-meteo.com/v1/forecast?latitude="+lm.lat+"&longitude="+lm.lng+"&current=temperature_2m,weather_code,wind_speed_10m").then(function(r){return r.json();});
+    if(box.dataset.token!==token) return;
+    var c=w.current, wc=wcode(c.weather_code);
+    document.getElementById("lmWeather").innerHTML=wc.e+" "+wc.d+" · <b>"+Math.round(c.temperature_2m)+"°C</b> · 바람 "+Math.round(c.wind_speed_10m)+"km/h";
+  }catch(e){ document.getElementById("lmWeather").textContent="날씨를 불러오지 못했어요 (인터넷 확인)"; }
+  try{
+    var j=await fetch("https://ko.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=pageimages&piprop=thumbnail&pithumbsize=520&redirects=1&titles="+encodeURIComponent(lm.name)).then(function(r){return r.json();});
+    if(box.dataset.token!==token) return;
+    var pages=j.query&&j.query.pages, src=null;
+    if(pages) for(var kk in pages){ if(pages[kk].thumbnail) src=pages[kk].thumbnail.source; }
+    if(src){ photo.src=src; photo.classList.add("show"); }
+  }catch(e){}
+}
+document.getElementById("lmClose").addEventListener("click",hideLandmarkInfo);
 
 /* ================= 3D GLOBE ================= */
 const CONT={"Fiji": "오세아니아", "Tanzania": "아프리카", "W. Sahara": "아프리카", "Canada": "북아메리카", "United States of America": "북아메리카", "Kazakhstan": "아시아", "Uzbekistan": "아시아", "Papua New Guinea": "오세아니아", "Indonesia": "아시아", "Argentina": "남아메리카", "Chile": "남아메리카", "Dem. Rep. Congo": "아프리카", "Somalia": "아프리카", "Kenya": "아프리카", "Sudan": "아프리카", "Chad": "아프리카", "Haiti": "북아메리카", "Dominican Rep.": "북아메리카", "Russia": "아시아", "Bahamas": "북아메리카", "Falkland Is.": "남아메리카", "Norway": "유럽", "Greenland": "북아메리카", "Fr. S. Antarctic Lands": "오세아니아", "Timor-Leste": "아시아", "South Africa": "아프리카", "Lesotho": "아프리카", "Mexico": "북아메리카", "Uruguay": "남아메리카", "Brazil": "남아메리카", "Bolivia": "남아메리카", "Peru": "남아메리카", "Colombia": "남아메리카", "Panama": "북아메리카", "Costa Rica": "북아메리카", "Nicaragua": "북아메리카", "Honduras": "북아메리카", "El Salvador": "북아메리카", "Guatemala": "북아메리카", "Belize": "북아메리카", "Venezuela": "남아메리카", "Guyana": "남아메리카", "Suriname": "남아메리카", "France": "유럽", "Ecuador": "남아메리카", "Puerto Rico": "북아메리카", "Jamaica": "북아메리카", "Cuba": "북아메리카", "Zimbabwe": "아프리카", "Botswana": "아프리카", "Namibia": "아프리카", "Senegal": "아프리카", "Mali": "아프리카", "Mauritania": "아프리카", "Benin": "아프리카", "Niger": "아프리카", "Nigeria": "아프리카", "Cameroon": "아프리카", "Togo": "아프리카", "Ghana": "아프리카", "Côte d'Ivoire": "아프리카", "Guinea": "아프리카", "Guinea-Bissau": "아프리카", "Liberia": "아프리카", "Sierra Leone": "아프리카", "Burkina Faso": "아프리카", "Central African Rep.": "아프리카", "Congo": "아프리카", "Gabon": "아프리카", "Eq. Guinea": "아프리카", "Zambia": "아프리카", "Malawi": "아프리카", "Mozambique": "아프리카", "eSwatini": "아프리카", "Angola": "아프리카", "Burundi": "아프리카", "Israel": "아시아", "Lebanon": "아시아", "Madagascar": "아프리카", "Palestine": "아시아", "Gambia": "아프리카", "Tunisia": "아프리카", "Algeria": "아프리카", "Jordan": "아시아", "United Arab Emirates": "아시아", "Qatar": "아시아", "Kuwait": "아시아", "Iraq": "아시아", "Oman": "아시아", "Vanuatu": "오세아니아", "Cambodia": "아시아", "Thailand": "아시아", "Laos": "아시아", "Myanmar": "아시아", "Vietnam": "아시아", "North Korea": "아시아", "South Korea": "아시아", "Mongolia": "아시아", "India": "아시아", "Bangladesh": "아시아", "Bhutan": "아시아", "Nepal": "아시아", "Pakistan": "아시아", "Afghanistan": "아시아", "Tajikistan": "아시아", "Kyrgyzstan": "아시아", "Turkmenistan": "아시아", "Iran": "아시아", "Syria": "아시아", "Armenia": "아시아", "Sweden": "유럽", "Belarus": "유럽", "Ukraine": "유럽", "Poland": "유럽", "Austria": "유럽", "Hungary": "유럽", "Moldova": "유럽", "Romania": "유럽", "Lithuania": "유럽", "Latvia": "유럽", "Estonia": "유럽", "Germany": "유럽", "Bulgaria": "유럽", "Greece": "유럽", "Turkey": "아시아", "Albania": "유럽", "Croatia": "유럽", "Switzerland": "유럽", "Luxembourg": "유럽", "Belgium": "유럽", "Netherlands": "유럽", "Portugal": "유럽", "Spain": "유럽", "Ireland": "유럽", "New Caledonia": "오세아니아", "Solomon Is.": "오세아니아", "New Zealand": "오세아니아", "Australia": "오세아니아", "Sri Lanka": "아시아", "China": "아시아", "Taiwan": "아시아", "Italy": "유럽", "Denmark": "유럽", "United Kingdom": "유럽", "Iceland": "유럽", "Azerbaijan": "아시아", "Georgia": "아시아", "Philippines": "아시아", "Malaysia": "아시아", "Brunei": "아시아", "Slovenia": "유럽", "Finland": "유럽", "Slovakia": "유럽", "Czechia": "유럽", "Eritrea": "아프리카", "Japan": "아시아", "Paraguay": "남아메리카", "Yemen": "아시아", "Saudi Arabia": "아시아", "N. Cyprus": "아시아", "Cyprus": "유럽", "Morocco": "아프리카", "Egypt": "아프리카", "Libya": "아프리카", "Ethiopia": "아프리카", "Djibouti": "아프리카", "Somaliland": "아프리카", "Uganda": "아프리카", "Rwanda": "아프리카", "Bosnia and Herz.": "유럽", "Macedonia": "유럽", "Serbia": "유럽", "Montenegro": "유럽", "Kosovo": "유럽", "Trinidad and Tobago": "남아메리카", "S. Sudan": "아프리카"};
