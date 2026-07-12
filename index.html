@@ -263,6 +263,8 @@
   .lm-sub{font-size:11.5px;color:var(--muted);margin:2px 0 8px}
   .lm-weather{font-size:13px;color:var(--muted);line-height:1.5}
   .lm-weather b{color:var(--ink);font-size:16px}
+  .lm-extra{display:block;margin-top:5px;font-size:11px;color:var(--muted);font-weight:600;line-height:1.4}
+  .lm-extra b{font-size:11px;color:var(--dot)}
   .lm-close{position:absolute;top:8px;right:8px;width:26px;height:26px;border:0;border-radius:50%;background:rgba(15,25,40,.5);
     color:#fff;font-size:15px;cursor:pointer;z-index:2;line-height:1}
 </style>
@@ -6534,16 +6536,20 @@ function wcode(n){
 async function showLandmarkInfo(lm){
   var box=document.getElementById("lmInfo");
   document.getElementById("lmName").textContent=(lm.emoji||"📍")+" "+lm.name;
-  document.getElementById("lmSub").textContent=(lm.city?lm.city+" · ":"")+"지금 날씨";
+  document.getElementById("lmSub").textContent=(lm.city?lm.city+" · ":"")+"실시간 현지 날씨";
   document.getElementById("lmWeather").innerHTML='<span class="spinner"></span> 불러오는 중…';
   var photo=document.getElementById("lmPhoto"); photo.classList.remove("show"); photo.removeAttribute("src");
   box.classList.add("show");
   var token=lm.name+"|"+lm.lat; box.dataset.token=token;
   try{
-    var w=await fetch("https://api.open-meteo.com/v1/forecast?latitude="+lm.lat+"&longitude="+lm.lng+"&current=temperature_2m,weather_code,wind_speed_10m").then(function(r){return r.json();});
+    var w=await fetch("https://api.open-meteo.com/v1/forecast?latitude="+lm.lat+"&longitude="+lm.lng+"&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1&wind_speed_unit=ms").then(function(r){return r.json();});
     if(box.dataset.token!==token) return;
     var c=w.current, wc=wcode(c.weather_code);
-    document.getElementById("lmWeather").innerHTML=wc.e+" "+wc.d+" · <b>"+Math.round(c.temperature_2m)+"°C</b> · 바람 "+Math.round(c.wind_speed_10m)+"km/h";
+    var hh=(c.time||"").slice(11,16);
+    var dmax=w.daily&&w.daily.temperature_2m_max?Math.round(w.daily.temperature_2m_max[0]):null;
+    var dmin=w.daily&&w.daily.temperature_2m_min?Math.round(w.daily.temperature_2m_min[0]):null;
+    document.getElementById("lmWeather").innerHTML=wc.e+" "+wc.d+" · <b>"+Math.round(c.temperature_2m)+"°C</b> · 바람 "+(Math.round(c.wind_speed_10m*10)/10)+"m/s"+
+      "<span class='lm-extra'>🕒 현지 "+hh+" 기준"+(dmax!=null?" · 오늘 <b>최고 "+dmax+"°</b> / 최저 "+dmin+"°":"")+"</span>";
   }catch(e){ document.getElementById("lmWeather").textContent="날씨를 불러오지 못했어요 (인터넷 확인)"; }
   try{
     var j=await fetch("https://ko.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=pageimages&piprop=thumbnail&pithumbsize=520&redirects=1&titles="+encodeURIComponent(lm.name)).then(function(r){return r.json();});
